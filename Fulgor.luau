@@ -4,12 +4,12 @@
     Latin: "Fulgor" = 閃光・輝き・稲妻
     Original UI Library for Roblox
     
-    Version: 1.1.7
+    Version: 1.1.8
     License: MIT
     
-    Changelog v1.1.7:
-      - Butter-smooth drag via input.Position (incremental delta)
-      - Same technique used by Rayfield / WindUI
+    Changelog v1.1.8:
+      - Reverted to reliable GetMouseLocation + RenderStepped
+      - Added exponential moving average smoothing to reduce stutter
     
     使い方:
     local Fulgor = loadstring(game:HttpGet("https://raw.githubusercontent.com/Bye-Bye-pass/Fulgor/main/Fulgor.luau"))()
@@ -446,7 +446,7 @@ function Window.new(config)
     self.Content = content
 
     local footer = Utils.Create("TextLabel", {
-        Text = "⚡ Fulgor  •  v1.1.7",
+        Text = "⚡ Fulgor  •  v1.1.8",
         Font = Enum.Font.Gotham,
         TextSize = 11,
         TextXAlignment = Enum.TextXAlignment.Right,
@@ -483,11 +483,13 @@ function Window.new(config)
 end
 
 --============================================================
--- Smooth Drag (input.Position incremental)
+-- Smooth Drag (GetMouseLocation + RenderStepped + smoothing)
 --============================================================
 function Window:_setupDrag(main, handle)
     local dragging = false
-    local lastMouse = nil
+    local dragStartMouse = Vector2.new(0, 0)
+    local dragStartPos = UDim2.new(0, 0, 0, 0)
+    local smoothX, smoothY = 0, 0
 
     self:Track(handle.InputBegan:Connect(function(input)
         if input.UserInputType ~= Enum.UserInputType.MouseButton1
@@ -495,37 +497,32 @@ function Window:_setupDrag(main, handle)
             return
         end
         dragging = true
-        lastMouse = nil
-    end))
-
-    self:Track(UserInputService.InputChanged:Connect(function(input)
-        if not dragging then return end
-        if input.UserInputType ~= Enum.UserInputType.MouseMovement
-        and input.UserInputType ~= Enum.UserInputType.Touch then
-            return
-        end
-
-        -- input.Position は MouseMovement でサブピクセル精度の座標を返す
-        local mouse = Vector2.new(input.Position.X, input.Position.Y)
-
-        if lastMouse then
-            local dx = mouse.X - lastMouse.X
-            local dy = mouse.Y - lastMouse.Y
-            local cur = main.Position
-            main.Position = UDim2.new(
-                cur.X.Scale, cur.X.Offset + dx,
-                cur.Y.Scale, cur.Y.Offset + dy
-            )
-        end
-        lastMouse = mouse
+        dragStartMouse = UserInputService:GetMouseLocation()
+        dragStartPos = main.Position
+        smoothX, smoothY = 0, 0
     end))
 
     self:Track(UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1
         or input.UserInputType == Enum.UserInputType.Touch then
             dragging = false
-            lastMouse = nil
         end
+    end))
+
+    self:Track(RunService.RenderStepped:Connect(function()
+        if not dragging then return end
+        local mouse = UserInputService:GetMouseLocation()
+        local targetX = mouse.X - dragStartMouse.X
+        local targetY = mouse.Y - dragStartMouse.Y
+
+        -- 指数移動平均でスムージング（0.7 = 滑らかさ重視）
+        smoothX = smoothX + (targetX - smoothX) * 0.7
+        smoothY = smoothY + (targetY - smoothY) * 0.7
+
+        main.Position = UDim2.new(
+            dragStartPos.X.Scale, dragStartPos.X.Offset + smoothX,
+            dragStartPos.Y.Scale, dragStartPos.Y.Offset + smoothY
+        )
     end))
 end
 
@@ -1113,7 +1110,7 @@ local Fulgor = {}
 Fulgor.__index = Fulgor
 Fulgor.Name = "Fulgor"
 Fulgor.Icon = "⚡"
-Fulgor.Version = "1.1.7"
+Fulgor.Version = "1.1.8"
 Fulgor.Themes = Themes
 
 function Fulgor:CreateWindow(config)
