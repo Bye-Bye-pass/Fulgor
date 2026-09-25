@@ -4,16 +4,23 @@
     Latin: "Fulgor" = 閃光・輝き・稲妻
     Original UI Library for Roblox
     
-    Version: 1.0.0
+    Version: 1.1.0
     License: MIT
     
+    Changelog v1.1.0:
+      - Refined color palette (amber instead of pure yellow)
+      - Added UIGradient depth (vertical shading, header gradient, glow)
+      - Smooth 60fps drag using RunService.RenderStepped
+      - Accent line and highlight strip on header
+    
     使い方:
-    local Fulgor = loadstring(game:HttpGet("https://raw.githubusercontent.com/you/Fulgor/main/Fulgor.luau"))()
+    local Fulgor = loadstring(game:HttpGet("https://raw.githubusercontent.com/Bye-Bye-pass/Fulgor/main/Fulgor.luau"))()
     local Window = Fulgor:CreateWindow({ Title = "My Script" })
 ]]
 
 local TweenService     = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+local RunService       = game:GetService("RunService")
 local Players          = game:GetService("Players")
 
 local LocalPlayer = Players.LocalPlayer
@@ -46,50 +53,65 @@ function Signal:Fire(...)
 end
 
 --============================================================
--- Theme (Volt デフォルト)
+-- Theme (Refined palette)
 --============================================================
 local Themes = {
     Volt = {
-        Background      = Color3.fromRGB(16, 16, 16),
-        Surface         = Color3.fromRGB(30, 30, 30),
-        SurfaceHover    = Color3.fromRGB(45, 45, 45),
-        Primary         = Color3.fromRGB(255, 212, 0),
-        PrimaryHover    = Color3.fromRGB(255, 238, 136),
-        Accent          = Color3.fromRGB(74, 123, 255),
-        Text            = Color3.fromRGB(255, 251, 230),
-        TextDim         = Color3.fromRGB(150, 150, 140),
-        Border          = Color3.fromRGB(60, 60, 55),
+        Background      = Color3.fromRGB(12, 12, 15),
+        BackgroundAlt   = Color3.fromRGB(18, 18, 22),
+        Surface         = Color3.fromRGB(24, 24, 28),
+        SurfaceAlt      = Color3.fromRGB(30, 30, 35),
+        SurfaceHover    = Color3.fromRGB(40, 40, 46),
+        Primary         = Color3.fromRGB(245, 195, 30),
+        PrimaryHover    = Color3.fromRGB(255, 215, 70),
+        PrimaryDeep     = Color3.fromRGB(180, 130, 15),
+        Glow            = Color3.fromRGB(255, 210, 60),
+        Accent          = Color3.fromRGB(255, 235, 140),
+        Text            = Color3.fromRGB(240, 240, 235),
+        TextDim         = Color3.fromRGB(140, 140, 148),
+        Border          = Color3.fromRGB(42, 42, 48),
+        BorderLight     = Color3.fromRGB(60, 60, 68),
         Success         = Color3.fromRGB(76, 200, 120),
         Error           = Color3.fromRGB(230, 80, 90),
-        Warning         = Color3.fromRGB(255, 212, 0),
+        Warning         = Color3.fromRGB(245, 195, 30),
     },
     Electric = {
-        Background      = Color3.fromRGB(15, 18, 32),
-        Surface         = Color3.fromRGB(26, 31, 53),
-        SurfaceHover    = Color3.fromRGB(38, 44, 72),
-        Primary         = Color3.fromRGB(74, 123, 255),
-        PrimaryHover    = Color3.fromRGB(123, 168, 255),
-        Accent          = Color3.fromRGB(255, 216, 74),
+        Background      = Color3.fromRGB(11, 14, 24),
+        BackgroundAlt   = Color3.fromRGB(16, 20, 34),
+        Surface         = Color3.fromRGB(24, 30, 48),
+        SurfaceAlt      = Color3.fromRGB(30, 36, 58),
+        SurfaceHover    = Color3.fromRGB(40, 48, 72),
+        Primary         = Color3.fromRGB(88, 140, 255),
+        PrimaryHover    = Color3.fromRGB(120, 165, 255),
+        PrimaryDeep     = Color3.fromRGB(40, 80, 180),
+        Glow            = Color3.fromRGB(100, 160, 255),
+        Accent          = Color3.fromRGB(255, 220, 90),
         Text            = Color3.fromRGB(240, 244, 255),
         TextDim         = Color3.fromRGB(140, 150, 180),
-        Border          = Color3.fromRGB(50, 60, 95),
+        Border          = Color3.fromRGB(45, 55, 85),
+        BorderLight     = Color3.fromRGB(65, 75, 110),
         Success         = Color3.fromRGB(76, 200, 120),
         Error           = Color3.fromRGB(230, 80, 90),
-        Warning         = Color3.fromRGB(255, 216, 74),
+        Warning         = Color3.fromRGB(255, 210, 90),
     },
     Storm = {
-        Background      = Color3.fromRGB(13, 10, 26),
-        Surface         = Color3.fromRGB(26, 20, 48),
-        SurfaceHover    = Color3.fromRGB(40, 32, 70),
-        Primary         = Color3.fromRGB(168, 85, 247),
-        PrimaryHover    = Color3.fromRGB(196, 181, 253),
-        Accent          = Color3.fromRGB(255, 216, 74),
+        Background      = Color3.fromRGB(13, 10, 22),
+        BackgroundAlt   = Color3.fromRGB(20, 16, 34),
+        Surface         = Color3.fromRGB(28, 22, 46),
+        SurfaceAlt      = Color3.fromRGB(35, 28, 56),
+        SurfaceHover    = Color3.fromRGB(46, 38, 70),
+        Primary         = Color3.fromRGB(170, 100, 240),
+        PrimaryHover    = Color3.fromRGB(195, 140, 255),
+        PrimaryDeep     = Color3.fromRGB(90, 45, 150),
+        Glow            = Color3.fromRGB(190, 130, 255),
+        Accent          = Color3.fromRGB(255, 220, 90),
         Text            = Color3.fromRGB(245, 240, 255),
         TextDim         = Color3.fromRGB(150, 140, 180),
-        Border          = Color3.fromRGB(55, 45, 90),
+        Border          = Color3.fromRGB(50, 42, 82),
+        BorderLight     = Color3.fromRGB(75, 62, 115),
         Success         = Color3.fromRGB(76, 200, 120),
         Error           = Color3.fromRGB(230, 80, 90),
-        Warning         = Color3.fromRGB(255, 216, 74),
+        Warning         = Color3.fromRGB(255, 210, 90),
     },
 }
 
@@ -154,6 +176,31 @@ function Utils.Tween(inst, props, time, style, dir)
     return tween
 end
 
+-- Gradient helpers
+function Utils.Gradient(parent, colorSequence, rotation, transparency, name)
+    local grad = Instance.new("UIGradient")
+    grad.Name = name or "FulgorGradient"
+    grad.Color = colorSequence
+    grad.Rotation = rotation or 90
+    if transparency then
+        grad.Transparency = transparency
+    end
+    grad.Parent = parent
+    return grad
+end
+
+-- Vertical shading (grayscale multiplier, keeps base color)
+function Utils.ShadeV(parent, topFactor, bottomFactor)
+    local function f(v)
+        local c = math.clamp(v, 0, 1)
+        return Color3.new(c, c, c)
+    end
+    return Utils.Gradient(parent, ColorSequence.new({
+        ColorSequenceKeypoint.new(0, f(topFactor or 1.0)),
+        ColorSequenceKeypoint.new(1, f(bottomFactor or 0.75)),
+    }), 90, nil, "ShadeV")
+end
+
 --============================================================
 -- Component 基底
 --============================================================
@@ -208,7 +255,9 @@ function Window.new(config)
     })
     self.ScreenGui = screenGui
 
+    --=========================
     -- メイン
+    --=========================
     local main = Utils.Create("Frame", {
         Name = "Main",
         Size = size,
@@ -216,34 +265,109 @@ function Window.new(config)
         AnchorPoint = Vector2.new(0.5, 0.5),
         Parent = screenGui,
     }, {
-        Utils.Corner(10),
-        Utils.Stroke(),
+        Utils.Corner(12),
     })
     self:BindTheme(main, "BackgroundColor3", "Background")
+    Utils.ShadeV(main, 1.0, 0.7)
 
+    -- 外枠のグロー
+    local glowStroke = Utils.Create("UIStroke", {
+        Thickness = 1,
+        Transparency = 0.55,
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+        Parent = main,
+    })
+    self:BindTheme(glowStroke, "Color", "Primary")
+
+    --=========================
     -- ヘッダー
+    --=========================
     local header = Utils.Create("Frame", {
         Name = "Header",
-        Size = UDim2.new(1, 0, 0, 40),
+        Size = UDim2.new(1, 0, 0, 42),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BorderSizePixel = 0,
         Parent = main,
     }, {
-        Utils.Corner(10),
+        Utils.Corner(12),
     })
     self:BindTheme(header, "BackgroundColor3", "Surface")
 
-    -- 稲妻ロゴ
+    -- ヘッダー下側の角を消す
+    local headerCornerFix = Utils.Create("Frame", {
+        Size = UDim2.new(1, 0, 0, 12),
+        Position = UDim2.new(0, 0, 1, -12),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BorderSizePixel = 0,
+        Parent = header,
+    })
+    self:BindTheme(headerCornerFix, "BackgroundColor3", "Surface")
+
+    -- ヘッダー横グラデ
+    local headerGrad = Instance.new("UIGradient")
+    headerGrad.Name = "HeaderGrad"
+    headerGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Theme.Get("PrimaryDeep")),
+        ColorSequenceKeypoint.new(0.45, Theme.Get("Surface")),
+        ColorSequenceKeypoint.new(1, Theme.Get("Surface")),
+    })
+    headerGrad.Rotation = 0
+    headerGrad.Parent = header
+    headerCornerFix:Clone and nil
+
+    local fixGrad = headerGrad:Clone()
+    fixGrad.Parent = headerCornerFix
+
+    -- 上部ハイライト
+    local topLine = Utils.Create("Frame", {
+        Size = UDim2.new(1, -24, 0, 1),
+        Position = UDim2.new(0, 12, 0, 0),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BackgroundTransparency = 0.85,
+        BorderSizePixel = 0,
+        Parent = header,
+    }, {
+        Utils.Corner(1),
+    })
+
+    -- アクセントの光るライン（ヘッダー下部）
+    local accentLine = Utils.Create("Frame", {
+        Size = UDim2.new(1, 0, 0, 1),
+        Position = UDim2.new(0, 0, 1, -1),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BackgroundTransparency = 0.15,
+        BorderSizePixel = 0,
+        Parent = header,
+    })
+    local accentGrad = Instance.new("UIGradient")
+    accentGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Theme.Get("Primary")),
+        ColorSequenceKeypoint.new(0.5, Theme.Get("Primary")),
+        ColorSequenceKeypoint.new(1, Theme.Get("Primary")),
+    })
+    accentGrad.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0),
+        NumberSequenceKeypoint.new(0.5, 0),
+        NumberSequenceKeypoint.new(1, 1),
+    })
+    accentGrad.Rotation = 0
+    accentGrad.Parent = accentLine
+    self._accentLine = accentLine
+
+    --=========================
+    -- ロゴ & タイトル
+    --=========================
     local logo = Utils.Create("TextLabel", {
         Text = "⚡",
         Font = Enum.Font.GothamBold,
         TextSize = 20,
         BackgroundTransparency = 1,
         Size = UDim2.fromOffset(24, 24),
-        Position = UDim2.fromOffset(14, 8),
+        Position = UDim2.fromOffset(14, 9),
         Parent = header,
     })
     self:BindTheme(logo, "TextColor3", "Primary")
 
-    -- タイトル
     local titleLabel = Utils.Create("TextLabel", {
         Text = title,
         Font = Enum.Font.GothamBold,
@@ -256,7 +380,6 @@ function Window.new(config)
     })
     self:BindTheme(titleLabel, "TextColor3", "Text")
 
-    -- バージョン表示
     local versionLabel = Utils.Create("TextLabel", {
         Text = "FULGOR",
         Font = Enum.Font.GothamBold,
@@ -269,7 +392,9 @@ function Window.new(config)
     })
     self:BindTheme(versionLabel, "TextColor3", "Primary")
 
+    --=========================
     -- 閉じる
+    --=========================
     local closeBtn = Utils.Create("TextButton", {
         Text = "✕",
         Font = Enum.Font.GothamBold,
@@ -277,18 +402,27 @@ function Window.new(config)
         Size = UDim2.fromOffset(28, 28),
         Position = UDim2.new(1, -36, 0.5, -14),
         AutoButtonColor = false,
+        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+        BackgroundTransparency = 0.5,
         Parent = header,
     }, {
         Utils.Corner(6),
     })
-    self:BindTheme(closeBtn, "BackgroundColor3", "Surface")
     self:BindTheme(closeBtn, "TextColor3", "TextDim")
 
     self:Track(closeBtn.MouseEnter:Connect(function()
-        Utils.Tween(closeBtn, { BackgroundColor3 = Theme.Get("Error"), TextColor3 = Color3.new(1,1,1) })
+        Utils.Tween(closeBtn, {
+            BackgroundColor3 = Theme.Get("Error"),
+            TextColor3 = Color3.new(1, 1, 1),
+            BackgroundTransparency = 0,
+        })
     end))
     self:Track(closeBtn.MouseLeave:Connect(function()
-        Utils.Tween(closeBtn, { BackgroundColor3 = Theme.Get("Surface"), TextColor3 = Theme.Get("TextDim") })
+        Utils.Tween(closeBtn, {
+            BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+            TextColor3 = Theme.Get("TextDim"),
+            BackgroundTransparency = 0.5,
+        })
     end))
     self:Track(closeBtn.Activated:Connect(function()
         Utils.Tween(main, { BackgroundTransparency = 1 }, 0.2)
@@ -297,11 +431,13 @@ function Window.new(config)
         main.BackgroundTransparency = 0
     end))
 
+    --=========================
     -- サイドバー
+    --=========================
     local sidebar = Utils.Create("Frame", {
         Name = "Sidebar",
         Size = UDim2.new(0, 140, 1, -50),
-        Position = UDim2.fromOffset(10, 45),
+        Position = UDim2.fromOffset(10, 48),
         BackgroundTransparency = 1,
         Parent = main,
     }, {
@@ -312,19 +448,23 @@ function Window.new(config)
     })
     self.Sidebar = sidebar
 
+    --=========================
     -- コンテンツ
+    --=========================
     local content = Utils.Create("Frame", {
         Name = "Content",
         Size = UDim2.new(1, -170, 1, -60),
-        Position = UDim2.fromOffset(160, 50),
+        Position = UDim2.fromOffset(160, 52),
         BackgroundTransparency = 1,
         Parent = main,
     })
     self.Content = content
 
+    --=========================
     -- フッター
+    --=========================
     local footer = Utils.Create("TextLabel", {
-        Text = "⚡ Fulgor  •  v1.0.0",
+        Text = "⚡ Fulgor  •  v1.1.0",
         Font = Enum.Font.Gotham,
         TextSize = 11,
         TextXAlignment = Enum.TextXAlignment.Right,
@@ -341,44 +481,68 @@ function Window.new(config)
 
     self:_setupDrag(main, header)
 
+    -- テーマ変更を反映
     self:Track(Theme.Changed:Connect(function()
         for _, binding in ipairs(self._themeBindings) do
             binding.inst[binding.prop] = Theme.Get(binding.key)
         end
+        -- ヘッダーグラデを再生成
+        headerGrad.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Theme.Get("PrimaryDeep")),
+            ColorSequenceKeypoint.new(0.45, Theme.Get("Surface")),
+            ColorSequenceKeypoint.new(1, Theme.Get("Surface")),
+        })
+        fixGrad.Color = headerGrad.Color
+        accentGrad.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Theme.Get("Primary")),
+            ColorSequenceKeypoint.new(0.5, Theme.Get("Primary")),
+            ColorSequenceKeypoint.new(1, Theme.Get("Primary")),
+        })
     end))
 
     return self
 end
 
+--============================================================
+-- Smooth Drag (RunService.RenderStepped)
+--============================================================
 function Window:_setupDrag(main, handle)
-    local dragging, dragStart, startPos
+    local dragging = false
+    local dragOffset = Vector2.new(0, 0)
 
     self:Track(handle.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = main.Position
+        if input.UserInputType ~= Enum.UserInputType.MouseButton1
+        and input.UserInputType ~= Enum.UserInputType.Touch then
+            return
         end
-    end))
-    self:Track(handle.InputChanged:Connect(function(input)
-        if not dragging then return end
-        if input.UserInputType ~= Enum.UserInputType.MouseMovement
-        and input.UserInputType ~= Enum.UserInputType.Touch then return end
-        local delta = input.Position - dragStart
-        main.Position = UDim2.new(
-            startPos.X.Scale, startPos.X.Offset + delta.X,
-            startPos.Y.Scale, startPos.Y.Offset + delta.Y
+        dragging = true
+        local mouse = UserInputService:GetMouseLocation()
+        dragOffset = Vector2.new(
+            mouse.X - main.AbsolutePosition.X,
+            mouse.Y - main.AbsolutePosition.Y
         )
     end))
-    self:Track(handle.InputEnded:Connect(function(input)
+
+    self:Track(UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1
         or input.UserInputType == Enum.UserInputType.Touch then
             dragging = false
         end
     end))
+
+    self:Track(RunService.RenderStepped:Connect(function()
+        if not dragging then return end
+        local mouse = UserInputService:GetMouseLocation()
+        main.Position = UDim2.fromOffset(
+            mouse.X - dragOffset.X,
+            mouse.Y - dragOffset.Y
+        )
+    end))
 end
 
+--============================================================
+-- CreateTab / CreateSection
+--============================================================
 function Window:CreateTab(name)
     local tab = {}
 
@@ -395,6 +559,18 @@ function Window:CreateTab(name)
     })
     self:BindTheme(btn, "BackgroundColor3", "Surface")
     self:BindTheme(btn, "TextColor3", "TextDim")
+    Utils.ShadeV(btn, 1.05, 0.9)
+
+    -- アクティブ時のグラデ
+    local activeGrad = Instance.new("UIGradient")
+    activeGrad.Name = "TabActiveGrad"
+    activeGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Theme.Get("Primary")),
+        ColorSequenceKeypoint.new(1, Theme.Get("PrimaryDeep")),
+    })
+    activeGrad.Rotation = 0
+    activeGrad.Enabled = false
+    activeGrad.Parent = btn
 
     local container = Utils.Create("ScrollingFrame", {
         Size = UDim2.fromScale(1, 1),
@@ -402,6 +578,7 @@ function Window:CreateTab(name)
         BorderSizePixel = 0,
         ScrollBarThickness = 4,
         ScrollBarImageColor3 = Theme.Get("Primary"),
+        ScrollBarImageTransparency = 0.3,
         CanvasSize = UDim2.new(),
         AutomaticCanvasSize = Enum.AutomaticSize.Y,
         Visible = false,
@@ -416,12 +593,14 @@ function Window:CreateTab(name)
     local function activate()
         for _, t in ipairs(self.Tabs) do
             t.Container.Visible = false
+            t.ActiveGrad.Enabled = false
             Utils.Tween(t.Button, {
                 BackgroundColor3 = Theme.Get("Surface"),
                 TextColor3 = Theme.Get("TextDim"),
             })
         end
         container.Visible = true
+        activeGrad.Enabled = true
         Utils.Tween(btn, {
             BackgroundColor3 = Theme.Get("Primary"),
             TextColor3 = Theme.Get("Background"),
@@ -443,6 +622,7 @@ function Window:CreateTab(name)
 
     tab.Button = btn
     tab.Container = container
+    tab.ActiveGrad = activeGrad
     tab.Name = name
 
     function tab:CreateSection(sectionName)
@@ -459,16 +639,35 @@ function Window:CreateTab(name)
             }),
         })
 
-        local header = Utils.Create("TextLabel", {
-            Text = "⚡ " .. sectionName:upper(),
+        -- セクションヘッダー（縦棒 + テキスト）
+        local headerRow = Utils.Create("Frame", {
+            Size = UDim2.new(1, 0, 0, 22),
+            BackgroundTransparency = 1,
+            Parent = frame,
+        })
+
+        local bullet = Utils.Create("Frame", {
+            Size = UDim2.fromOffset(3, 14),
+            Position = UDim2.fromOffset(0, 4),
+            BackgroundColor3 = Theme.Get("Primary"),
+            BorderSizePixel = 0,
+            Parent = headerRow,
+        }, {
+            Utils.Corner(2),
+        })
+        Utils.ShadeV(bullet, 1.0, 0.6)
+
+        local headerLabel = Utils.Create("TextLabel", {
+            Text = sectionName:upper(),
             Font = Enum.Font.GothamBold,
             TextSize = 11,
             TextXAlignment = Enum.TextXAlignment.Left,
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, 20),
-            Parent = frame,
+            Size = UDim2.new(1, -10, 1, 0),
+            Position = UDim2.fromOffset(10, 0),
+            Parent = headerRow,
         })
-        header.TextColor3 = Theme.Get("Primary")
+        headerLabel.TextColor3 = Theme.Get("Primary")
 
         local body = Utils.Create("Frame", {
             Size = UDim2.new(1, 0, 0, 0),
@@ -477,7 +676,7 @@ function Window:CreateTab(name)
             Parent = frame,
         }, {
             Utils.Create("UIListLayout", {
-                Padding = UDim.new(0, 4),
+                Padding = UDim.new(0, 5),
                 SortOrder = Enum.SortOrder.LayoutOrder,
             }),
         })
@@ -504,27 +703,34 @@ function Components.Button(section, text, callback)
         Text = text,
         Font = Enum.Font.GothamMedium,
         TextSize = 13,
-        Size = UDim2.new(1, 0, 0, 34),
+        Size = UDim2.new(1, 0, 0, 36),
         AutoButtonColor = false,
+        BackgroundColor3 = Theme.Get("Surface"),
+        TextColor3 = Theme.Get("Text"),
         Parent = section.Body,
     }, {
         Utils.Corner(6),
         Utils.Stroke(),
     })
-    btn.BackgroundColor3 = Theme.Get("Surface")
-    btn.TextColor3 = Theme.Get("Text")
+    Utils.ShadeV(btn, 1.08, 0.85)
+
+    -- ホバー用のハイライトグラデ
+    local hoverGrad = Instance.new("UIGradient")
+    hoverGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(210, 210, 210)),
+    })
+    hoverGrad.Rotation = 90
+    hoverGrad.Enabled = false
+    hoverGrad.Parent = btn
 
     btn.MouseEnter:Connect(function()
-        Utils.Tween(btn, {
-            BackgroundColor3 = Theme.Get("Primary"),
-            TextColor3 = Theme.Get("Background"),
-        })
+        Utils.Tween(btn, { BackgroundColor3 = Theme.Get("Primary") })
+        hoverGrad.Enabled = true
     end)
     btn.MouseLeave:Connect(function()
-        Utils.Tween(btn, {
-            BackgroundColor3 = Theme.Get("Surface"),
-            TextColor3 = Theme.Get("Text"),
-        })
+        Utils.Tween(btn, { BackgroundColor3 = Theme.Get("Surface") })
+        hoverGrad.Enabled = false
     end)
     btn.Activated:Connect(function()
         if callback then task.spawn(callback) end
@@ -534,8 +740,9 @@ end
 
 function Components.Toggle(section, text, default, callback)
     local state = default or false
+
     local frame = Utils.Create("Frame", {
-        Size = UDim2.new(1, 0, 0, 34),
+        Size = UDim2.new(1, 0, 0, 36),
         BackgroundTransparency = 1,
         Parent = section.Body,
     })
@@ -562,15 +769,17 @@ function Components.Toggle(section, text, default, callback)
         Utils.Corner(12),
         Utils.Stroke(),
     })
+    Utils.ShadeV(toggle, 1.05, 0.85)
 
     local knob = Utils.Create("Frame", {
         Size = UDim2.fromOffset(18, 18),
         Position = state and UDim2.new(1, -21, 0.5, -9) or UDim2.fromOffset(3, 3),
-        BackgroundColor3 = state and Theme.Get("Background") or Color3.fromRGB(200, 200, 200),
+        BackgroundColor3 = state and Theme.Get("Background") or Color3.fromRGB(210, 210, 210),
         Parent = toggle,
     }, {
         Utils.Corner(9),
     })
+    Utils.ShadeV(knob, 1.15, 0.85)
 
     local function update()
         Utils.Tween(toggle, {
@@ -578,7 +787,7 @@ function Components.Toggle(section, text, default, callback)
         })
         Utils.Tween(knob, {
             Position = state and UDim2.new(1, -21, 0.5, -9) or UDim2.fromOffset(3, 3),
-            BackgroundColor3 = state and Theme.Get("Background") or Color3.fromRGB(200, 200, 200),
+            BackgroundColor3 = state and Theme.Get("Background") or Color3.fromRGB(210, 210, 210),
         })
     end
 
@@ -601,7 +810,7 @@ function Components.Slider(section, text, min, max, default, callback)
     local value = default or min
 
     local frame = Utils.Create("Frame", {
-        Size = UDim2.new(1, 0, 0, 46),
+        Size = UDim2.new(1, 0, 0, 48),
         BackgroundTransparency = 1,
         Parent = section.Body,
     })
@@ -631,12 +840,13 @@ function Components.Slider(section, text, min, max, default, callback)
 
     local bar = Utils.Create("Frame", {
         Size = UDim2.new(1, 0, 0, 8),
-        Position = UDim2.fromOffset(0, 28),
+        Position = UDim2.fromOffset(0, 30),
         BackgroundColor3 = Theme.Get("Surface"),
         Parent = frame,
     }, {
         Utils.Corner(4),
     })
+    Utils.ShadeV(bar, 0.8, 1.0)
 
     local fill = Utils.Create("Frame", {
         Size = UDim2.new((value - min) / (max - min), 0, 1, 0),
@@ -645,6 +855,14 @@ function Components.Slider(section, text, min, max, default, callback)
     }, {
         Utils.Corner(4),
     })
+
+    local fillGrad = Instance.new("UIGradient")
+    fillGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Theme.Get("Primary")),
+        ColorSequenceKeypoint.new(1, Theme.Get("PrimaryHover")),
+    })
+    fillGrad.Rotation = 0
+    fillGrad.Parent = fill
 
     local dragging = false
 
@@ -696,7 +914,7 @@ function Components.Textbox(section, placeholder, callback)
         TextSize = 13,
         TextXAlignment = Enum.TextXAlignment.Left,
         ClearTextOnFocus = false,
-        Size = UDim2.new(1, 0, 0, 34),
+        Size = UDim2.new(1, 0, 0, 36),
         BackgroundColor3 = Theme.Get("Surface"),
         TextColor3 = Theme.Get("Text"),
         Parent = section.Body,
@@ -705,6 +923,7 @@ function Components.Textbox(section, placeholder, callback)
         Utils.Stroke(),
         Utils.Padding(10),
     })
+    Utils.ShadeV(box, 0.9, 1.05)
 
     box.Focused:Connect(function()
         Utils.Tween(box, { BackgroundColor3 = Theme.Get("SurfaceHover") })
@@ -721,7 +940,7 @@ function Components.Dropdown(section, text, options, callback)
     local expanded = false
 
     local frame = Utils.Create("Frame", {
-        Size = UDim2.new(1, 0, 0, 34),
+        Size = UDim2.new(1, 0, 0, 36),
         BackgroundTransparency = 1,
         Parent = section.Body,
     })
@@ -741,6 +960,7 @@ function Components.Dropdown(section, text, options, callback)
         Utils.Stroke(),
         Utils.Padding(10),
     })
+    Utils.ShadeV(header, 1.05, 0.9)
 
     local list = Utils.Create("Frame", {
         Size = UDim2.new(1, 0, 0, 0),
@@ -759,6 +979,7 @@ function Components.Dropdown(section, text, options, callback)
         Utils.Padding(4),
     })
     list.AutomaticSize = Enum.AutomaticSize.Y
+    Utils.ShadeV(list, 1.05, 0.85)
 
     for i, opt in ipairs(options) do
         local item = Utils.Create("TextButton", {
@@ -834,7 +1055,7 @@ function Components.Keybind(section, text, default, callback)
     local listening = false
 
     local frame = Utils.Create("Frame", {
-        Size = UDim2.new(1, 0, 0, 34),
+        Size = UDim2.new(1, 0, 0, 36),
         BackgroundTransparency = 1,
         Parent = section.Body,
     })
@@ -864,6 +1085,7 @@ function Components.Keybind(section, text, default, callback)
         Utils.Corner(6),
         Utils.Stroke(),
     })
+    Utils.ShadeV(btn, 1.05, 0.85)
 
     btn.Activated:Connect(function()
         listening = true
@@ -909,7 +1131,7 @@ local Fulgor = {}
 Fulgor.__index = Fulgor
 Fulgor.Name = "Fulgor"
 Fulgor.Icon = "⚡"
-Fulgor.Version = "1.0.0"
+Fulgor.Version = "1.1.0"
 Fulgor.Themes = Themes
 
 function Fulgor:CreateWindow(config)
@@ -942,23 +1164,33 @@ function Fulgor:Notify(config)
     _notifCount = _notifCount + 1
 
     local notif = Utils.Create("Frame", {
-        Size = UDim2.fromOffset(300, 70),
-        Position = UDim2.new(1, -320, 0, 20 + index * 80),
+        Size = UDim2.fromOffset(300, 72),
+        Position = UDim2.new(1, -320, 0, 20 + index * 82),
         BackgroundColor3 = Theme.Get("Surface"),
         Parent = parent,
     }, {
         Utils.Corner(8),
         Utils.Stroke(),
     })
+    Utils.ShadeV(notif, 1.1, 0.85)
 
+    -- 左のアクセントバー（グラデ）
     local accent = Utils.Create("Frame", {
         Size = UDim2.new(0, 4, 1, -16),
         Position = UDim2.fromOffset(8, 8),
         BackgroundColor3 = Theme.Get("Primary"),
+        BorderSizePixel = 0,
         Parent = notif,
     }, {
         Utils.Corner(2),
     })
+    local accentGrad = Instance.new("UIGradient")
+    accentGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Theme.Get("Primary")),
+        ColorSequenceKeypoint.new(1, Theme.Get("PrimaryDeep")),
+    })
+    accentGrad.Rotation = 90
+    accentGrad.Parent = accent
 
     local titleLabel = Utils.Create("TextLabel", {
         Text = title,
@@ -980,7 +1212,7 @@ function Fulgor:Notify(config)
         TextWrapped = true,
         BackgroundTransparency = 1,
         Size = UDim2.new(1, -30, 0, 30),
-        Position = UDim2.fromOffset(22, 30),
+        Position = UDim2.fromOffset(22, 32),
         Parent = notif,
     })
     contentLabel.TextColor3 = Theme.Get("Text")
