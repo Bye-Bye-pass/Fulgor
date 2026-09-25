@@ -30,7 +30,7 @@
 ## 🚀 Quick Start
 
 ```lua
-local Fulgor = loadstring(game:HttpGet("https://raw.githubusercontent.com/YOUR_NAME/Fulgor/main/Fulgor.luau"))()
+local Fulgor = loadstring(game:HttpGet("https://raw.githubusercontent.com/Bye-Bye-pass/Fulgor/main/Fulgor.luau"))()
 
 local Window = Fulgor:CreateWindow({ Title = "My Script" })
 local Tab = Window:CreateTab("Main")
