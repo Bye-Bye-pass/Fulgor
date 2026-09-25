@@ -4,18 +4,17 @@
     Latin: "Fulgor" = 閃光・輝き・稲妻
     Original UI Library for Roblox
     
-    Version: 1.1.0
+    Version: 1.1.1
     License: MIT
+    
+    Changelog v1.1.1:
+      - Fixed syntax error (invalid method reference)
+      - Fixed UIGradient conflicts (multiple gradients on same instance)
     
     Changelog v1.1.0:
       - Refined color palette (amber instead of pure yellow)
-      - Added UIGradient depth (vertical shading, header gradient, glow)
+      - Added UIGradient depth
       - Smooth 60fps drag using RunService.RenderStepped
-      - Accent line and highlight strip on header
-    
-    使い方:
-    local Fulgor = loadstring(game:HttpGet("https://raw.githubusercontent.com/Bye-Bye-pass/Fulgor/main/Fulgor.luau"))()
-    local Window = Fulgor:CreateWindow({ Title = "My Script" })
 ]]
 
 local TweenService     = game:GetService("TweenService")
@@ -53,7 +52,7 @@ function Signal:Fire(...)
 end
 
 --============================================================
--- Theme (Refined palette)
+-- Theme
 --============================================================
 local Themes = {
     Volt = {
@@ -176,29 +175,34 @@ function Utils.Tween(inst, props, time, style, dir)
     return tween
 end
 
--- Gradient helpers
-function Utils.Gradient(parent, colorSequence, rotation, transparency, name)
+-- Grayscale gradient: top→bottom brightness
+local function grayKeypoint(time, factor)
+    local c = math.clamp(factor or 1, 0, 1)
+    return ColorSequenceKeypoint.new(time, Color3.new(c, c, c))
+end
+
+function Utils.ShadeV(parent, topFactor, bottomFactor)
     local grad = Instance.new("UIGradient")
-    grad.Name = name or "FulgorGradient"
-    grad.Color = colorSequence
-    grad.Rotation = rotation or 90
-    if transparency then
-        grad.Transparency = transparency
-    end
+    grad.Name = "FulgorShadeV"
+    grad.Color = ColorSequence.new({
+        grayKeypoint(0, topFactor or 1.0),
+        grayKeypoint(1, bottomFactor or 0.75),
+    })
+    grad.Rotation = 90
     grad.Parent = parent
     return grad
 end
 
--- Vertical shading (grayscale multiplier, keeps base color)
-function Utils.ShadeV(parent, topFactor, bottomFactor)
-    local function f(v)
-        local c = math.clamp(v, 0, 1)
-        return Color3.new(c, c, c)
-    end
-    return Utils.Gradient(parent, ColorSequence.new({
-        ColorSequenceKeypoint.new(0, f(topFactor or 1.0)),
-        ColorSequenceKeypoint.new(1, f(bottomFactor or 0.75)),
-    }), 90, nil, "ShadeV")
+function Utils.ColorGradientH(parent, colorA, colorB)
+    local grad = Instance.new("UIGradient")
+    grad.Name = "FulgorColorH"
+    grad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, colorA),
+        ColorSequenceKeypoint.new(1, colorB),
+    })
+    grad.Rotation = 0
+    grad.Parent = parent
+    return grad
 end
 
 --============================================================
@@ -270,7 +274,6 @@ function Window.new(config)
     self:BindTheme(main, "BackgroundColor3", "Background")
     Utils.ShadeV(main, 1.0, 0.7)
 
-    -- 外枠のグロー
     local glowStroke = Utils.Create("UIStroke", {
         Thickness = 1,
         Transparency = 0.55,
@@ -293,7 +296,7 @@ function Window.new(config)
     })
     self:BindTheme(header, "BackgroundColor3", "Surface")
 
-    -- ヘッダー下側の角を消す
+    -- ヘッダー下側の角を消すための追加 Frame
     local headerCornerFix = Utils.Create("Frame", {
         Size = UDim2.new(1, 0, 0, 12),
         Position = UDim2.new(0, 0, 1, -12),
@@ -313,10 +316,9 @@ function Window.new(config)
     })
     headerGrad.Rotation = 0
     headerGrad.Parent = header
-    headerCornerFix:Clone and nil
 
-    local fixGrad = headerGrad:Clone()
-    fixGrad.Parent = headerCornerFix
+    -- CornerFix には ShadeV のみ
+    Utils.ShadeV(headerCornerFix, 1.0, 1.0)
 
     -- 上部ハイライト
     local topLine = Utils.Create("Frame", {
@@ -330,7 +332,7 @@ function Window.new(config)
         Utils.Corner(1),
     })
 
-    -- アクセントの光るライン（ヘッダー下部）
+    -- アクセントライン（ヘッダー下部）
     local accentLine = Utils.Create("Frame", {
         Size = UDim2.new(1, 0, 0, 1),
         Position = UDim2.new(0, 0, 1, -1),
@@ -340,6 +342,7 @@ function Window.new(config)
         Parent = header,
     })
     local accentGrad = Instance.new("UIGradient")
+    accentGrad.Name = "AccentGrad"
     accentGrad.Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Theme.Get("Primary")),
         ColorSequenceKeypoint.new(0.5, Theme.Get("Primary")),
@@ -352,7 +355,6 @@ function Window.new(config)
     })
     accentGrad.Rotation = 0
     accentGrad.Parent = accentLine
-    self._accentLine = accentLine
 
     --=========================
     -- ロゴ & タイトル
@@ -464,7 +466,7 @@ function Window.new(config)
     -- フッター
     --=========================
     local footer = Utils.Create("TextLabel", {
-        Text = "⚡ Fulgor  •  v1.1.0",
+        Text = "⚡ Fulgor  •  v1.1.1",
         Font = Enum.Font.Gotham,
         TextSize = 11,
         TextXAlignment = Enum.TextXAlignment.Right,
@@ -481,18 +483,16 @@ function Window.new(config)
 
     self:_setupDrag(main, header)
 
-    -- テーマ変更を反映
+    -- テーマ変更時にヘッダーグラデも更新
     self:Track(Theme.Changed:Connect(function()
         for _, binding in ipairs(self._themeBindings) do
             binding.inst[binding.prop] = Theme.Get(binding.key)
         end
-        -- ヘッダーグラデを再生成
         headerGrad.Color = ColorSequence.new({
             ColorSequenceKeypoint.new(0, Theme.Get("PrimaryDeep")),
             ColorSequenceKeypoint.new(0.45, Theme.Get("Surface")),
             ColorSequenceKeypoint.new(1, Theme.Get("Surface")),
         })
-        fixGrad.Color = headerGrad.Color
         accentGrad.Color = ColorSequence.new({
             ColorSequenceKeypoint.new(0, Theme.Get("Primary")),
             ColorSequenceKeypoint.new(0.5, Theme.Get("Primary")),
@@ -504,7 +504,7 @@ function Window.new(config)
 end
 
 --============================================================
--- Smooth Drag (RunService.RenderStepped)
+-- Smooth Drag
 --============================================================
 function Window:_setupDrag(main, handle)
     local dragging = false
@@ -553,24 +553,44 @@ function Window:CreateTab(name)
         TextXAlignment = Enum.TextXAlignment.Left,
         Size = UDim2.new(1, 0, 0, 32),
         AutoButtonColor = false,
+        BackgroundColor3 = Theme.Get("Surface"),
+        TextColor3 = Theme.Get("TextDim"),
         Parent = self.Sidebar,
     }, {
         Utils.Corner(6),
     })
-    self:BindTheme(btn, "BackgroundColor3", "Surface")
-    self:BindTheme(btn, "TextColor3", "TextDim")
-    Utils.ShadeV(btn, 1.05, 0.9)
 
-    -- アクティブ時のグラデ
-    local activeGrad = Instance.new("UIGradient")
-    activeGrad.Name = "TabActiveGrad"
-    activeGrad.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Theme.Get("Primary")),
-        ColorSequenceKeypoint.new(1, Theme.Get("PrimaryDeep")),
+    -- タブ用の1つのグラデ（アクティブ時は色を差し替える）
+    local tabGrad = Instance.new("UIGradient")
+    tabGrad.Name = "TabGrad"
+    tabGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+        ColorSequenceKeypoint.new(1, Color3.new(0.85, 0.85, 0.85)),
     })
-    activeGrad.Rotation = 0
-    activeGrad.Enabled = false
-    activeGrad.Parent = btn
+    tabGrad.Rotation = 90
+    tabGrad.Parent = btn
+
+    local function setInactive()
+        Utils.Tween(btn, {
+            BackgroundColor3 = Theme.Get("Surface"),
+            TextColor3 = Theme.Get("TextDim"),
+        })
+        tabGrad.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+            ColorSequenceKeypoint.new(1, Color3.new(0.85, 0.85, 0.85)),
+        })
+    end
+
+    local function setActive()
+        Utils.Tween(btn, {
+            BackgroundColor3 = Theme.Get("Primary"),
+            TextColor3 = Theme.Get("Background"),
+        })
+        tabGrad.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+            ColorSequenceKeypoint.new(1, Color3.new(0.8, 0.8, 0.8)),
+        })
+    end
 
     local container = Utils.Create("ScrollingFrame", {
         Size = UDim2.fromScale(1, 1),
@@ -593,18 +613,10 @@ function Window:CreateTab(name)
     local function activate()
         for _, t in ipairs(self.Tabs) do
             t.Container.Visible = false
-            t.ActiveGrad.Enabled = false
-            Utils.Tween(t.Button, {
-                BackgroundColor3 = Theme.Get("Surface"),
-                TextColor3 = Theme.Get("TextDim"),
-            })
+            t.SetInactive()
         end
         container.Visible = true
-        activeGrad.Enabled = true
-        Utils.Tween(btn, {
-            BackgroundColor3 = Theme.Get("Primary"),
-            TextColor3 = Theme.Get("Background"),
-        })
+        setActive()
         self.ActiveTab = tab
     end
 
@@ -622,8 +634,9 @@ function Window:CreateTab(name)
 
     tab.Button = btn
     tab.Container = container
-    tab.ActiveGrad = activeGrad
     tab.Name = name
+    tab.SetInactive = setInactive
+    tab.SetActive = setActive
 
     function tab:CreateSection(sectionName)
         local section = {}
@@ -639,7 +652,7 @@ function Window:CreateTab(name)
             }),
         })
 
-        -- セクションヘッダー（縦棒 + テキスト）
+        -- セクションヘッダー
         local headerRow = Utils.Create("Frame", {
             Size = UDim2.new(1, 0, 0, 22),
             BackgroundTransparency = 1,
@@ -655,7 +668,6 @@ function Window:CreateTab(name)
         }, {
             Utils.Corner(2),
         })
-        Utils.ShadeV(bullet, 1.0, 0.6)
 
         local headerLabel = Utils.Create("TextLabel", {
             Text = sectionName:upper(),
@@ -712,25 +724,19 @@ function Components.Button(section, text, callback)
         Utils.Corner(6),
         Utils.Stroke(),
     })
-    Utils.ShadeV(btn, 1.08, 0.85)
-
-    -- ホバー用のハイライトグラデ
-    local hoverGrad = Instance.new("UIGradient")
-    hoverGrad.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(210, 210, 210)),
-    })
-    hoverGrad.Rotation = 90
-    hoverGrad.Enabled = false
-    hoverGrad.Parent = btn
+    Utils.ShadeV(btn, 1.0, 0.85)
 
     btn.MouseEnter:Connect(function()
-        Utils.Tween(btn, { BackgroundColor3 = Theme.Get("Primary") })
-        hoverGrad.Enabled = true
+        Utils.Tween(btn, {
+            BackgroundColor3 = Theme.Get("Primary"),
+            TextColor3 = Theme.Get("Background"),
+        })
     end)
     btn.MouseLeave:Connect(function()
-        Utils.Tween(btn, { BackgroundColor3 = Theme.Get("Surface") })
-        hoverGrad.Enabled = false
+        Utils.Tween(btn, {
+            BackgroundColor3 = Theme.Get("Surface"),
+            TextColor3 = Theme.Get("Text"),
+        })
     end)
     btn.Activated:Connect(function()
         if callback then task.spawn(callback) end
@@ -769,7 +775,7 @@ function Components.Toggle(section, text, default, callback)
         Utils.Corner(12),
         Utils.Stroke(),
     })
-    Utils.ShadeV(toggle, 1.05, 0.85)
+    Utils.ShadeV(toggle, 1.0, 0.85)
 
     local knob = Utils.Create("Frame", {
         Size = UDim2.fromOffset(18, 18),
@@ -779,7 +785,7 @@ function Components.Toggle(section, text, default, callback)
     }, {
         Utils.Corner(9),
     })
-    Utils.ShadeV(knob, 1.15, 0.85)
+    Utils.ShadeV(knob, 1.0, 0.85)
 
     local function update()
         Utils.Tween(toggle, {
@@ -855,14 +861,7 @@ function Components.Slider(section, text, min, max, default, callback)
     }, {
         Utils.Corner(4),
     })
-
-    local fillGrad = Instance.new("UIGradient")
-    fillGrad.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Theme.Get("Primary")),
-        ColorSequenceKeypoint.new(1, Theme.Get("PrimaryHover")),
-    })
-    fillGrad.Rotation = 0
-    fillGrad.Parent = fill
+    Utils.ColorGradientH(fill, Theme.Get("Primary"), Theme.Get("PrimaryHover"))
 
     local dragging = false
 
@@ -923,7 +922,6 @@ function Components.Textbox(section, placeholder, callback)
         Utils.Stroke(),
         Utils.Padding(10),
     })
-    Utils.ShadeV(box, 0.9, 1.05)
 
     box.Focused:Connect(function()
         Utils.Tween(box, { BackgroundColor3 = Theme.Get("SurfaceHover") })
@@ -960,7 +958,6 @@ function Components.Dropdown(section, text, options, callback)
         Utils.Stroke(),
         Utils.Padding(10),
     })
-    Utils.ShadeV(header, 1.05, 0.9)
 
     local list = Utils.Create("Frame", {
         Size = UDim2.new(1, 0, 0, 0),
@@ -979,7 +976,6 @@ function Components.Dropdown(section, text, options, callback)
         Utils.Padding(4),
     })
     list.AutomaticSize = Enum.AutomaticSize.Y
-    Utils.ShadeV(list, 1.05, 0.85)
 
     for i, opt in ipairs(options) do
         local item = Utils.Create("TextButton", {
@@ -1085,7 +1081,6 @@ function Components.Keybind(section, text, default, callback)
         Utils.Corner(6),
         Utils.Stroke(),
     })
-    Utils.ShadeV(btn, 1.05, 0.85)
 
     btn.Activated:Connect(function()
         listening = true
@@ -1131,7 +1126,7 @@ local Fulgor = {}
 Fulgor.__index = Fulgor
 Fulgor.Name = "Fulgor"
 Fulgor.Icon = "⚡"
-Fulgor.Version = "1.1.0"
+Fulgor.Version = "1.1.1"
 Fulgor.Themes = Themes
 
 function Fulgor:CreateWindow(config)
@@ -1172,9 +1167,8 @@ function Fulgor:Notify(config)
         Utils.Corner(8),
         Utils.Stroke(),
     })
-    Utils.ShadeV(notif, 1.1, 0.85)
+    Utils.ShadeV(notif, 1.0, 0.85)
 
-    -- 左のアクセントバー（グラデ）
     local accent = Utils.Create("Frame", {
         Size = UDim2.new(0, 4, 1, -16),
         Position = UDim2.fromOffset(8, 8),
@@ -1184,13 +1178,7 @@ function Fulgor:Notify(config)
     }, {
         Utils.Corner(2),
     })
-    local accentGrad = Instance.new("UIGradient")
-    accentGrad.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Theme.Get("Primary")),
-        ColorSequenceKeypoint.new(1, Theme.Get("PrimaryDeep")),
-    })
-    accentGrad.Rotation = 90
-    accentGrad.Parent = accent
+    Utils.ShadeV(accent, 1.0, 0.6)
 
     local titleLabel = Utils.Create("TextLabel", {
         Text = title,
