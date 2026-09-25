@@ -4,17 +4,28 @@
     Latin: "Fulgor" = 閃光・輝き・稲妻
     Original UI Library for Roblox
     
-    Version: 1.1.1
+    Version: 1.1.2
     License: MIT
+    
+    Changelog v1.1.2:
+      - Fixed drag jump caused by AnchorPoint offset
     
     Changelog v1.1.1:
       - Fixed syntax error (invalid method reference)
-      - Fixed UIGradient conflicts (multiple gradients on same instance)
+      - Fixed UIGradient conflicts
     
     Changelog v1.1.0:
       - Refined color palette (amber instead of pure yellow)
       - Added UIGradient depth
       - Smooth 60fps drag using RunService.RenderStepped
+    
+    使い方:
+    local Fulgor = loadstring(game:HttpGet("https://raw.githubusercontent.com/Bye-Bye-pass/Fulgor/main/Fulgor.luau"))()
+    local Window = Fulgor:CreateWindow({ Title = "My Script" })
+    local Tab = Window:CreateTab("Main")
+    Tab:CreateSection("General"):CreateButton("Click", function()
+        Fulgor:Notify({ Title = "⚡", Content = "Hello!" })
+    end)
 ]]
 
 local TweenService     = game:GetService("TweenService")
@@ -175,7 +186,6 @@ function Utils.Tween(inst, props, time, style, dir)
     return tween
 end
 
--- Grayscale gradient: top→bottom brightness
 local function grayKeypoint(time, factor)
     local c = math.clamp(factor or 1, 0, 1)
     return ColorSequenceKeypoint.new(time, Color3.new(c, c, c))
@@ -260,13 +270,13 @@ function Window.new(config)
     self.ScreenGui = screenGui
 
     --=========================
-    -- メイン
+    -- メイン（左上基準 AnchorPoint(0,0)）
     --=========================
     local main = Utils.Create("Frame", {
         Name = "Main",
         Size = size,
-        Position = UDim2.fromScale(0.5, 0.5),
-        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(0.5, -size.X.Offset / 2, 0.5, -size.Y.Offset / 2),
+        AnchorPoint = Vector2.new(0, 0),
         Parent = screenGui,
     }, {
         Utils.Corner(12),
@@ -296,7 +306,6 @@ function Window.new(config)
     })
     self:BindTheme(header, "BackgroundColor3", "Surface")
 
-    -- ヘッダー下側の角を消すための追加 Frame
     local headerCornerFix = Utils.Create("Frame", {
         Size = UDim2.new(1, 0, 0, 12),
         Position = UDim2.new(0, 0, 1, -12),
@@ -305,8 +314,8 @@ function Window.new(config)
         Parent = header,
     })
     self:BindTheme(headerCornerFix, "BackgroundColor3", "Surface")
+    Utils.ShadeV(headerCornerFix, 1.0, 1.0)
 
-    -- ヘッダー横グラデ
     local headerGrad = Instance.new("UIGradient")
     headerGrad.Name = "HeaderGrad"
     headerGrad.Color = ColorSequence.new({
@@ -317,10 +326,6 @@ function Window.new(config)
     headerGrad.Rotation = 0
     headerGrad.Parent = header
 
-    -- CornerFix には ShadeV のみ
-    Utils.ShadeV(headerCornerFix, 1.0, 1.0)
-
-    -- 上部ハイライト
     local topLine = Utils.Create("Frame", {
         Size = UDim2.new(1, -24, 0, 1),
         Position = UDim2.new(0, 12, 0, 0),
@@ -332,7 +337,6 @@ function Window.new(config)
         Utils.Corner(1),
     })
 
-    -- アクセントライン（ヘッダー下部）
     local accentLine = Utils.Create("Frame", {
         Size = UDim2.new(1, 0, 0, 1),
         Position = UDim2.new(0, 0, 1, -1),
@@ -356,9 +360,6 @@ function Window.new(config)
     accentGrad.Rotation = 0
     accentGrad.Parent = accentLine
 
-    --=========================
-    -- ロゴ & タイトル
-    --=========================
     local logo = Utils.Create("TextLabel", {
         Text = "⚡",
         Font = Enum.Font.GothamBold,
@@ -394,9 +395,6 @@ function Window.new(config)
     })
     self:BindTheme(versionLabel, "TextColor3", "Primary")
 
-    --=========================
-    -- 閉じる
-    --=========================
     local closeBtn = Utils.Create("TextButton", {
         Text = "✕",
         Font = Enum.Font.GothamBold,
@@ -433,9 +431,6 @@ function Window.new(config)
         main.BackgroundTransparency = 0
     end))
 
-    --=========================
-    -- サイドバー
-    --=========================
     local sidebar = Utils.Create("Frame", {
         Name = "Sidebar",
         Size = UDim2.new(0, 140, 1, -50),
@@ -450,9 +445,6 @@ function Window.new(config)
     })
     self.Sidebar = sidebar
 
-    --=========================
-    -- コンテンツ
-    --=========================
     local content = Utils.Create("Frame", {
         Name = "Content",
         Size = UDim2.new(1, -170, 1, -60),
@@ -462,11 +454,8 @@ function Window.new(config)
     })
     self.Content = content
 
-    --=========================
-    -- フッター
-    --=========================
     local footer = Utils.Create("TextLabel", {
-        Text = "⚡ Fulgor  •  v1.1.1",
+        Text = "⚡ Fulgor  •  v1.1.2",
         Font = Enum.Font.Gotham,
         TextSize = 11,
         TextXAlignment = Enum.TextXAlignment.Right,
@@ -483,7 +472,6 @@ function Window.new(config)
 
     self:_setupDrag(main, header)
 
-    -- テーマ変更時にヘッダーグラデも更新
     self:Track(Theme.Changed:Connect(function()
         for _, binding in ipairs(self._themeBindings) do
             binding.inst[binding.prop] = Theme.Get(binding.key)
@@ -504,7 +492,7 @@ function Window.new(config)
 end
 
 --============================================================
--- Smooth Drag
+-- Smooth Drag (AnchorPoint already (0,0))
 --============================================================
 function Window:_setupDrag(main, handle)
     local dragging = false
@@ -560,7 +548,6 @@ function Window:CreateTab(name)
         Utils.Corner(6),
     })
 
-    -- タブ用の1つのグラデ（アクティブ時は色を差し替える）
     local tabGrad = Instance.new("UIGradient")
     tabGrad.Name = "TabGrad"
     tabGrad.Color = ColorSequence.new({
@@ -652,7 +639,6 @@ function Window:CreateTab(name)
             }),
         })
 
-        -- セクションヘッダー
         local headerRow = Utils.Create("Frame", {
             Size = UDim2.new(1, 0, 0, 22),
             BackgroundTransparency = 1,
@@ -1126,7 +1112,7 @@ local Fulgor = {}
 Fulgor.__index = Fulgor
 Fulgor.Name = "Fulgor"
 Fulgor.Icon = "⚡"
-Fulgor.Version = "1.1.1"
+Fulgor.Version = "1.1.2"
 Fulgor.Themes = Themes
 
 function Fulgor:CreateWindow(config)
