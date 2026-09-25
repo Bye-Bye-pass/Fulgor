@@ -4,18 +4,21 @@
     Latin: "Fulgor" = 閃光・輝き・稲妻
     Original UI Library for Roblox
     
-    Version: 1.1.3
+    Version: 1.1.4
     License: MIT
     
+    Changelog v1.1.4:
+      - Fixed drag broken in v1.1.3 (input.Delta is always 0 for MouseMovement)
+      - Smooth drag via start-position offset (input.Position based)
+    
     Changelog v1.1.3:
-      - Smooth drag via delta accumulation (no more stutter)
+      - (broken) attempted delta-based drag
     
     Changelog v1.1.2:
       - Fixed drag jump caused by AnchorPoint offset
     
     Changelog v1.1.1:
-      - Fixed syntax error (invalid method reference)
-      - Fixed UIGradient conflicts
+      - Fixed syntax error / UIGradient conflicts
     
     Changelog v1.1.0:
       - Refined color palette (amber instead of pure yellow)
@@ -456,7 +459,7 @@ function Window.new(config)
     self.Content = content
 
     local footer = Utils.Create("TextLabel", {
-        Text = "⚡ Fulgor  •  v1.1.3",
+        Text = "⚡ Fulgor  •  v1.1.4",
         Font = Enum.Font.Gotham,
         TextSize = 11,
         TextXAlignment = Enum.TextXAlignment.Right,
@@ -493,19 +496,24 @@ function Window.new(config)
 end
 
 --============================================================
--- Smooth Drag (delta-based, 60fps)
+-- Smooth Drag (input.Position based)
 --============================================================
 function Window:_setupDrag(main, handle)
     local dragging = false
+    local dragStartMouse = Vector2.new(0, 0)
+    local dragStartPos = UDim2.new(0, 0, 0, 0)
 
     self:Track(handle.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
+        if input.UserInputType ~= Enum.UserInputType.MouseButton1
+        and input.UserInputType ~= Enum.UserInputType.Touch then
+            return
         end
+        dragging = true
+        dragStartMouse = Vector2.new(input.Position.X, input.Position.Y)
+        dragStartPos = main.Position
     end))
 
-    -- マウスの移動量（Delta）を毎フレーム加算 → ヌルヌル動く
+    -- input.Position は毎回正しい現在位置を返す
     self:Track(UserInputService.InputChanged:Connect(function(input)
         if not dragging then return end
         if input.UserInputType ~= Enum.UserInputType.MouseMovement
@@ -513,13 +521,11 @@ function Window:_setupDrag(main, handle)
             return
         end
 
-        local delta = input.Delta
-        local cur = main.Position
+        local dx = input.Position.X - dragStartMouse.X
+        local dy = input.Position.Y - dragStartMouse.Y
         main.Position = UDim2.new(
-            cur.X.Scale,
-            cur.X.Offset + delta.X,
-            cur.Y.Scale,
-            cur.Y.Offset + delta.Y
+            dragStartPos.X.Scale, dragStartPos.X.Offset + dx,
+            dragStartPos.Y.Scale, dragStartPos.Y.Offset + dy
         )
     end))
 
@@ -1115,7 +1121,7 @@ local Fulgor = {}
 Fulgor.__index = Fulgor
 Fulgor.Name = "Fulgor"
 Fulgor.Icon = "⚡"
-Fulgor.Version = "1.1.3"
+Fulgor.Version = "1.1.4"
 Fulgor.Themes = Themes
 
 function Fulgor:CreateWindow(config)
