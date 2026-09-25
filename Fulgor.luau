@@ -4,25 +4,12 @@
     Latin: "Fulgor" = 閃光・輝き・稲妻
     Original UI Library for Roblox
     
-    Version: 1.1.4
+    Version: 1.1.5
     License: MIT
     
-    Changelog v1.1.4:
-      - Fixed drag broken in v1.1.3 (input.Delta is always 0 for MouseMovement)
-      - Smooth drag via start-position offset (input.Position based)
-    
-    Changelog v1.1.3:
-      - (broken) attempted delta-based drag
-    
-    Changelog v1.1.2:
-      - Fixed drag jump caused by AnchorPoint offset
-    
-    Changelog v1.1.1:
-      - Fixed syntax error / UIGradient conflicts
-    
-    Changelog v1.1.0:
-      - Refined color palette (amber instead of pure yellow)
-      - Added UIGradient depth
+    Changelog v1.1.5:
+      - Reverted to proven GetMouseLocation + RenderStepped drag
+      - input.Position does not update for MouseMovement on some Roblox versions
     
     使い方:
     local Fulgor = loadstring(game:HttpGet("https://raw.githubusercontent.com/Bye-Bye-pass/Fulgor/main/Fulgor.luau"))()
@@ -459,7 +446,7 @@ function Window.new(config)
     self.Content = content
 
     local footer = Utils.Create("TextLabel", {
-        Text = "⚡ Fulgor  •  v1.1.4",
+        Text = "⚡ Fulgor  •  v1.1.5",
         Font = Enum.Font.Gotham,
         TextSize = 11,
         TextXAlignment = Enum.TextXAlignment.Right,
@@ -496,7 +483,7 @@ function Window.new(config)
 end
 
 --============================================================
--- Smooth Drag (input.Position based)
+-- Drag (GetMouseLocation + RenderStepped)
 --============================================================
 function Window:_setupDrag(main, handle)
     local dragging = false
@@ -509,24 +496,8 @@ function Window:_setupDrag(main, handle)
             return
         end
         dragging = true
-        dragStartMouse = Vector2.new(input.Position.X, input.Position.Y)
+        dragStartMouse = UserInputService:GetMouseLocation()
         dragStartPos = main.Position
-    end))
-
-    -- input.Position は毎回正しい現在位置を返す
-    self:Track(UserInputService.InputChanged:Connect(function(input)
-        if not dragging then return end
-        if input.UserInputType ~= Enum.UserInputType.MouseMovement
-        and input.UserInputType ~= Enum.UserInputType.Touch then
-            return
-        end
-
-        local dx = input.Position.X - dragStartMouse.X
-        local dy = input.Position.Y - dragStartMouse.Y
-        main.Position = UDim2.new(
-            dragStartPos.X.Scale, dragStartPos.X.Offset + dx,
-            dragStartPos.Y.Scale, dragStartPos.Y.Offset + dy
-        )
     end))
 
     self:Track(UserInputService.InputEnded:Connect(function(input)
@@ -534,6 +505,17 @@ function Window:_setupDrag(main, handle)
         or input.UserInputType == Enum.UserInputType.Touch then
             dragging = false
         end
+    end))
+
+    self:Track(RunService.RenderStepped:Connect(function()
+        if not dragging then return end
+        local mouse = UserInputService:GetMouseLocation()
+        local dx = mouse.X - dragStartMouse.X
+        local dy = mouse.Y - dragStartMouse.Y
+        main.Position = UDim2.new(
+            dragStartPos.X.Scale, dragStartPos.X.Offset + dx,
+            dragStartPos.Y.Scale, dragStartPos.Y.Offset + dy
+        )
     end))
 end
 
@@ -1121,7 +1103,7 @@ local Fulgor = {}
 Fulgor.__index = Fulgor
 Fulgor.Name = "Fulgor"
 Fulgor.Icon = "⚡"
-Fulgor.Version = "1.1.4"
+Fulgor.Version = "1.1.5"
 Fulgor.Themes = Themes
 
 function Fulgor:CreateWindow(config)
