@@ -4,8 +4,11 @@
     Latin: "Fulgor" = 閃光・輝き・稲妻
     Original UI Library for Roblox
     
-    Version: 1.1.2
+    Version: 1.1.3
     License: MIT
+    
+    Changelog v1.1.3:
+      - Smooth drag via delta accumulation (no more stutter)
     
     Changelog v1.1.2:
       - Fixed drag jump caused by AnchorPoint offset
@@ -17,7 +20,6 @@
     Changelog v1.1.0:
       - Refined color palette (amber instead of pure yellow)
       - Added UIGradient depth
-      - Smooth 60fps drag using RunService.RenderStepped
     
     使い方:
     local Fulgor = loadstring(game:HttpGet("https://raw.githubusercontent.com/Bye-Bye-pass/Fulgor/main/Fulgor.luau"))()
@@ -259,7 +261,6 @@ function Window.new(config)
     local title = config.Title or "Fulgor"
     local size = config.Size or UDim2.fromOffset(620, 440)
 
-    -- ScreenGui
     local screenGui = Utils.Create("ScreenGui", {
         Name = "Fulgor_" .. tostring(math.random(1, 1e6)),
         ResetOnSpawn = false,
@@ -270,7 +271,7 @@ function Window.new(config)
     self.ScreenGui = screenGui
 
     --=========================
-    -- メイン（左上基準 AnchorPoint(0,0)）
+    -- メイン（左上基準）
     --=========================
     local main = Utils.Create("Frame", {
         Name = "Main",
@@ -455,7 +456,7 @@ function Window.new(config)
     self.Content = content
 
     local footer = Utils.Create("TextLabel", {
-        Text = "⚡ Fulgor  •  v1.1.2",
+        Text = "⚡ Fulgor  •  v1.1.3",
         Font = Enum.Font.Gotham,
         TextSize = 11,
         TextXAlignment = Enum.TextXAlignment.Right,
@@ -492,22 +493,33 @@ function Window.new(config)
 end
 
 --============================================================
--- Smooth Drag (AnchorPoint already (0,0))
+-- Smooth Drag (delta-based, 60fps)
 --============================================================
 function Window:_setupDrag(main, handle)
     local dragging = false
-    local dragOffset = Vector2.new(0, 0)
 
     self:Track(handle.InputBegan:Connect(function(input)
-        if input.UserInputType ~= Enum.UserInputType.MouseButton1
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+        end
+    end))
+
+    -- マウスの移動量（Delta）を毎フレーム加算 → ヌルヌル動く
+    self:Track(UserInputService.InputChanged:Connect(function(input)
+        if not dragging then return end
+        if input.UserInputType ~= Enum.UserInputType.MouseMovement
         and input.UserInputType ~= Enum.UserInputType.Touch then
             return
         end
-        dragging = true
-        local mouse = UserInputService:GetMouseLocation()
-        dragOffset = Vector2.new(
-            mouse.X - main.AbsolutePosition.X,
-            mouse.Y - main.AbsolutePosition.Y
+
+        local delta = input.Delta
+        local cur = main.Position
+        main.Position = UDim2.new(
+            cur.X.Scale,
+            cur.X.Offset + delta.X,
+            cur.Y.Scale,
+            cur.Y.Offset + delta.Y
         )
     end))
 
@@ -516,15 +528,6 @@ function Window:_setupDrag(main, handle)
         or input.UserInputType == Enum.UserInputType.Touch then
             dragging = false
         end
-    end))
-
-    self:Track(RunService.RenderStepped:Connect(function()
-        if not dragging then return end
-        local mouse = UserInputService:GetMouseLocation()
-        main.Position = UDim2.fromOffset(
-            mouse.X - dragOffset.X,
-            mouse.Y - dragOffset.Y
-        )
     end))
 end
 
@@ -1112,7 +1115,7 @@ local Fulgor = {}
 Fulgor.__index = Fulgor
 Fulgor.Name = "Fulgor"
 Fulgor.Icon = "⚡"
-Fulgor.Version = "1.1.2"
+Fulgor.Version = "1.1.3"
 Fulgor.Themes = Themes
 
 function Fulgor:CreateWindow(config)
