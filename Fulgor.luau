@@ -4,12 +4,12 @@
     Latin: "Fulgor" = 閃光・輝き・稲妻
     Original UI Library for Roblox
     
-    Version: 1.1.8
+    Version: 1.1.9
     License: MIT
     
-    Changelog v1.1.8:
-      - Reverted to reliable GetMouseLocation + RenderStepped
-      - Added exponential moving average smoothing to reduce stutter
+    Changelog v1.1.9:
+      - RenderStepped only connected during drag (was always on)
+      - Disable UIStroke during drag for huge performance boost
     
     使い方:
     local Fulgor = loadstring(game:HttpGet("https://raw.githubusercontent.com/Bye-Bye-pass/Fulgor/main/Fulgor.luau"))()
@@ -275,6 +275,7 @@ function Window.new(config)
     self:BindTheme(main, "BackgroundColor3", "Background")
     Utils.ShadeV(main, 1.0, 0.7)
 
+    -- グローストローク（ドラッグ中は無効化する）
     local glowStroke = Utils.Create("UIStroke", {
         Thickness = 1,
         Transparency = 0.55,
@@ -282,6 +283,7 @@ function Window.new(config)
         Parent = main,
     })
     self:BindTheme(glowStroke, "Color", "Primary")
+    self._glowStroke = glowStroke
 
     --=========================
     -- ヘッダー
@@ -446,7 +448,7 @@ function Window.new(config)
     self.Content = content
 
     local footer = Utils.Create("TextLabel", {
-        Text = "⚡ Fulgor  •  v1.1.8",
+        Text = "⚡ Fulgor  •  v1.1.9",
         Font = Enum.Font.Gotham,
         TextSize = 11,
         TextXAlignment = Enum.TextXAlignment.Right,
@@ -483,13 +485,26 @@ function Window.new(config)
 end
 
 --============================================================
--- Smooth Drag (GetMouseLocation + RenderStepped + smoothing)
+-- Smooth Drag (only during drag + stroke off for performance)
 --============================================================
 function Window:_setupDrag(main, handle)
     local dragging = false
     local dragStartMouse = Vector2.new(0, 0)
     local dragStartPos = UDim2.new(0, 0, 0, 0)
     local smoothX, smoothY = 0, 0
+    local renderConn = nil
+    local glowStroke = self._glowStroke
+
+    local function stopDrag()
+        if not dragging then return end
+        dragging = false
+        if renderConn then
+            renderConn:Disconnect()
+            renderConn = nil
+        end
+        -- ストロークを戻す
+        if glowStroke then glowStroke.Enabled = true end
+    end
 
     self:Track(handle.InputBegan:Connect(function(input)
         if input.UserInputType ~= Enum.UserInputType.MouseButton1
@@ -500,29 +515,32 @@ function Window:_setupDrag(main, handle)
         dragStartMouse = UserInputService:GetMouseLocation()
         dragStartPos = main.Position
         smoothX, smoothY = 0, 0
+
+        -- ドラッグ中はUIStrokeを無効化（描画負荷激減）
+        if glowStroke then glowStroke.Enabled = false end
+
+        -- RenderSteppedはドラッグ中のみ接続
+        renderConn = RunService.RenderStepped:Connect(function()
+            if not dragging then return end
+            local mouse = UserInputService:GetMouseLocation()
+            local targetX = mouse.X - dragStartMouse.X
+            local targetY = mouse.Y - dragStartMouse.Y
+
+            smoothX = smoothX + (targetX - smoothX) * 0.7
+            smoothY = smoothY + (targetY - smoothY) * 0.7
+
+            main.Position = UDim2.new(
+                dragStartPos.X.Scale, dragStartPos.X.Offset + smoothX,
+                dragStartPos.Y.Scale, dragStartPos.Y.Offset + smoothY
+            )
+        end)
     end))
 
     self:Track(UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1
         or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
+            stopDrag()
         end
-    end))
-
-    self:Track(RunService.RenderStepped:Connect(function()
-        if not dragging then return end
-        local mouse = UserInputService:GetMouseLocation()
-        local targetX = mouse.X - dragStartMouse.X
-        local targetY = mouse.Y - dragStartMouse.Y
-
-        -- 指数移動平均でスムージング（0.7 = 滑らかさ重視）
-        smoothX = smoothX + (targetX - smoothX) * 0.7
-        smoothY = smoothY + (targetY - smoothY) * 0.7
-
-        main.Position = UDim2.new(
-            dragStartPos.X.Scale, dragStartPos.X.Offset + smoothX,
-            dragStartPos.Y.Scale, dragStartPos.Y.Offset + smoothY
-        )
     end))
 end
 
@@ -1110,7 +1128,7 @@ local Fulgor = {}
 Fulgor.__index = Fulgor
 Fulgor.Name = "Fulgor"
 Fulgor.Icon = "⚡"
-Fulgor.Version = "1.1.8"
+Fulgor.Version = "1.1.9"
 Fulgor.Themes = Themes
 
 function Fulgor:CreateWindow(config)
